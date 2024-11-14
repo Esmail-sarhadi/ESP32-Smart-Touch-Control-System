@@ -1,0 +1,799 @@
+<!DOCTYPE HTML>
+<html dir="rtl" lang="fa">
+<head>
+    <title>کنترل پیشرفته ESP32</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;200;300;400;500;600;700;800;900&display=swap');
+        
+        :root {
+            --primary: #2196F3;
+            --success: #4CAF50;
+            --danger: #f44336;
+            --warning: #ff9800;
+            
+            /* Light Theme */
+            --bg-primary: #f0f2f5;
+            --bg-secondary: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --border-color: #eeeeee;
+            --glow-color: rgba(76, 175, 80, 0.5);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --text-primary: #ffffff;
+            --text-secondary: #cccccc;
+            --border-color: #404040;
+            --glow-color: rgba(76, 175, 80, 0.3);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body { 
+            font-family: 'Vazirmatn', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: var(--bg-secondary);
+            padding: 2rem;
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 48px rgba(0,0,0,0.15);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(45deg, var(--primary), var(--success));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: fadeIn 1s ease;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: 2px solid var(--text-secondary);
+            color: var(--text-primary);
+            padding: 12px 24px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .theme-toggle:hover {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+            transform: translateY(-2px);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            background: var(--bg-primary);
+            padding: 0.5rem;
+            border-radius: 16px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px 24px;
+            cursor: pointer;
+            border-radius: 12px;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+            text-align: center;
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tab:hover {
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .tab.active {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--success));
+            animation: slideIn 0.3s ease;
+        }
+
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            align-items: center;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .switch {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 2rem 0;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(145deg, #e6e6e6, #ffffff);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--text-primary);
+            box-shadow: 
+                -8px -8px 16px rgba(255,255,255,0.8),
+                8px 8px 16px rgba(0,0,0,0.1);
+        }
+
+        .slider::before {
+            content: "خاموش";
+            position: absolute;
+            font-weight: 600;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        input:checked + .slider {
+            background: linear-gradient(145deg, var(--success), #45a049);
+            box-shadow: 
+                0 0 30px var(--glow-color),
+                inset -8px -8px 16px rgba(255,255,255,0.2),
+                inset 8px 8px 16px rgba(0,0,0,0.2);
+        }
+
+        input:checked + .slider::before {
+            content: "روشن";
+            color: white;
+            text-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+
+        .slider::after {
+            content: "";
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle at center, transparent 50%, rgba(255,255,255,0.2) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        input:checked + .slider::after {
+            opacity: 1;
+            animation: pulse 2s infinite;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 16px;
+            width: 100%;
+            border: 2px solid var(--border-color);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--success));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-left: 8px;
+            position: relative;
+        }
+
+        .status-on { 
+            background-color: var(--success);
+            box-shadow: 0 0 20px var(--glow-color);
+            animation: glow 1.5s infinite alternate;
+        }
+
+        .status-off { 
+            background-color: var(--danger); 
+        }
+
+        .device-info {
+            margin-top: 1rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            padding: 0.5rem;
+            border-radius: 8px;
+            background: var(--bg-primary);
+            transition: all 0.3s ease;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 250px;
+            margin-top: 2rem;
+            position: relative;
+            background: var(--bg-primary);
+            border-radius: 16px;
+            padding: 1rem;
+            overflow: hidden;
+        }
+
+        .chart-bar {
+            position: absolute;
+            bottom: 0;
+            width: 24px;
+            background: linear-gradient(to top, var(--primary), var(--success));
+            border-radius: 4px 4px 0 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .chart-bar:hover {
+            filter: brightness(1.2);
+            transform: scaleX(1.1);
+        }
+
+        .schedule-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .schedule-item {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 2px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .schedule-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        }
+
+        .time-input {
+            background: var(--bg-primary);
+            border: 2px solid var(--border-color);
+            padding: 12px;
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .time-input:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+        }
+
+        .switch-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .switch-label:hover {
+            background: var(--bg-primary);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, var(--primary), #1976D2);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, var(--danger), #d32f2f);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 20px var(--glow-color); }
+            50% { transform: scale(1.05); box-shadow: 0 0 40px var(--glow-color); }
+            100% { transform: scale(1); box-shadow: 0 0 20px var(--glow-color); }
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 10px var(--glow-color); }
+            to { box-shadow: 0 0 20px var(--glow-color), 0 0 40px var(--glow-color); }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate__animated {
+            animation-duration: 0.5s;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .tabs {
+                flex-wrap: wrap;
+            }
+            
+            .schedule-container {
+                grid-template-columns: 1fr;
+            }
+
+            .switch {
+                width: 150px;
+                height: 150px;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container animate__animated animate__fadeIn">
+        <div class="header">
+            <h1>کنترل ESP32</h1>
+            <button class="theme-toggle" id="themeToggle">
+                <span class="theme-icon">🌓</span>
+                <span class="theme-text">تغییر تم</span>
+            </button>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active animate__animated animate__fadeIn" data-tab="control">کنترل</div>
+            <div class="tab animate__animated animate__fadeIn" data-tab="history">تاریخچه</div>
+            <div class="tab animate__animated animate__fadeIn" data-tab="schedule">زمان‌بندی</div>
+        </div>
+
+        <div class="tab-content" id="controlTab">
+            <div class="control-panel">
+                <label class="switch">
+                    <input type="checkbox" id="touchButton">
+                    <span class="slider"></span>
+                </label>
+                
+                <div class="card animate__animated animate__fadeIn">
+                    <h3>وضعیت دستگاه</h3>
+                    <div id="status">
+                        <span class="status-indicator"></span>
+                        <span class="status-text">در حال دریافت وضعیت...</span>
+                    </div>
+                    <div class="device-info" id="deviceInfo"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="historyTab" style="display: none;">
+            <div class="card">
+                <h3>تاریخچه وضعیت</h3>
+                <div class="chart-container" id="historyChart"></div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="scheduleTab" style="display: none;">
+            <div class="card">
+                <h3>زمان‌بندی</h3>
+                <div class="schedule-container" id="scheduleContainer">
+                    <!-- Schedule items will be added here -->
+                </div>
+                <button class="btn btn-primary" style="margin-top: 1rem;" onclick="addSchedule()">
+                    <span>+</span>
+                    افزودن زمان‌بندی جدید
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme Management
+        let currentTheme = 'light';
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = themeToggle.querySelector('.theme-icon');
+        
+        function toggleTheme() {
+            currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            localStorage.setItem('theme', currentTheme);
+            themeIcon.textContent = currentTheme === 'light' ? '🌓' : '🌔';
+            themeToggle.classList.add('animate__animated', 'animate__rubberBand');
+            setTimeout(() => themeToggle.classList.remove('animate__animated', 'animate__rubberBand'), 1000);
+        }
+        
+        themeToggle.onclick = toggleTheme;
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            currentTheme = savedTheme;
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            themeIcon.textContent = currentTheme === 'light' ? '🌓' : '🌔';
+        }
+
+        // Tab Management with Animations
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                const tabId = tab.getAttribute('data-tab');
+                tabContents.forEach(content => {
+                    if (content.id === `${tabId}Tab`) {
+                        content.style.display = 'block';
+                        content.classList.add('animate__animated', 'animate__fadeIn');
+                        setTimeout(() => content.classList.remove('animate__animated', 'animate__fadeIn'), 1000);
+                    } else {
+                        content.style.display = 'none';
+                    }
+                });
+            });
+        });
+
+        // Device Control with Enhanced Animations
+        let touchState = false;
+        const button = document.getElementById('touchButton');
+        const status = document.getElementById('status');
+        const deviceInfo = document.getElementById('deviceInfo');
+        const statusIndicator = status.querySelector('.status-indicator');
+        const statusText = status.querySelector('.status-text');
+        
+        // History Management with Enhanced Visualization
+        const historyData = [];
+        const maxHistoryPoints = 20;
+
+        function updateHistory(state, sender = 'System') {
+            const now = new Date();
+            historyData.push({
+                time: now,
+                state: state,
+                sender: sender
+            });
+            
+            if (historyData.length > maxHistoryPoints) {
+                historyData.shift();
+            }
+            
+            updateHistoryChart();
+        }
+
+        function updateHistoryChart() {
+            const chart = document.getElementById('historyChart');
+            chart.innerHTML = '';
+            
+            historyData.forEach((data, index) => {
+                const bar = document.createElement('div');
+                bar.className = 'chart-bar animate__animated animate__fadeInUp';
+                bar.style.height = data.state ? '180px' : '40px';
+                bar.style.left = `${(index / maxHistoryPoints) * 90 + 5}%`;
+                bar.style.animationDelay = `${index * 50}ms`;
+                
+                // Enhanced tooltip
+                bar.title = `
+                    زمان: ${data.time.toLocaleTimeString('fa-IR')}
+                    وضعیت: ${data.state ? 'روشن' : 'خاموش'}
+                    فرستنده: ${data.sender}
+                `;
+                
+                chart.appendChild(bar);
+            });
+        }
+
+        // Schedule Management with Enhanced UI
+        const schedules = [];
+
+        function addSchedule() {
+            const now = new Date();
+            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            
+            const schedule = {
+                time: timeStr,
+                state: true,
+                active: true,
+                id: Date.now()
+            };
+            schedules.push(schedule);
+            updateScheduleUI();
+            saveSchedules();
+        }
+
+        function updateScheduleUI() {
+            const container = document.getElementById('scheduleContainer');
+            container.innerHTML = '';
+            
+            schedules.forEach((schedule) => {
+                const item = document.createElement('div');
+                item.className = 'schedule-item animate__animated animate__fadeIn';
+                item.innerHTML = `
+                    <input type="time" class="time-input" value="${schedule.time}"
+                           onchange="updateScheduleTime('${schedule.id}', this.value)">
+                    <label class="switch-label">
+                        <input type="checkbox" ${schedule.state ? 'checked' : ''}
+                               onchange="updateScheduleState('${schedule.id}', this.checked)">
+                        <span>روشن/خاموش</span>
+                    </label>
+                    <label class="switch-label">
+                        <input type="checkbox" ${schedule.active ? 'checked' : ''}
+                               onchange="updateScheduleActive('${schedule.id}', this.checked)">
+                        <span>فعال</span>
+                    </label>
+                    <button class="btn btn-danger" onclick="deleteSchedule('${schedule.id}')">حذف</button>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function updateScheduleTime(id, time) {
+            const schedule = schedules.find(s => s.id === parseInt(id));
+            if (schedule) {
+                schedule.time = time;
+                saveSchedules();
+            }
+        }
+
+        function updateScheduleState(id, state) {
+            const schedule = schedules.find(s => s.id === parseInt(id));
+            if (schedule) {
+                schedule.state = state;
+                saveSchedules();
+            }
+        }
+
+        function updateScheduleActive(id, active) {
+            const schedule = schedules.find(s => s.id === parseInt(id));
+            if (schedule) {
+                schedule.active = active;
+                saveSchedules();
+            }
+        }
+
+        function deleteSchedule(id) {
+            const index = schedules.findIndex(s => s.id === parseInt(id));
+            if (index !== -1) {
+                const item = document.querySelector(`.schedule-item:nth-child(${index + 1})`);
+                item.classList.add('animate__animated', 'animate__fadeOutRight');
+                setTimeout(() => {
+                    schedules.splice(index, 1);
+                    updateScheduleUI();
+                    saveSchedules();
+                }, 500);
+            }
+        }
+
+        // Device State Management with Enhanced UI
+        button.onclick = function() {
+            touchState = !touchState;
+            updateButtonState();
+            
+            fetch('/send_touch', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({state: touchState})
+            })
+            .then(response => response.json())
+            .then(data => {
+                status.classList.add('animate__animated', 'animate__pulse');
+                setTimeout(() => status.classList.remove('animate__animated', 'animate__pulse'), 1000);
+                updateHistory(touchState, 'WebApp');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                touchState = !touchState;
+                updateButtonState();
+            });
+        };
+        
+        function updateButtonState() {
+            button.checked = touchState;
+        }
+        
+        function updateStatus(state, sender) {
+            statusIndicator.className = 'status-indicator ' + (state ? 'status-on' : 'status-off');
+            statusText.textContent = state ? 'روشن' : 'خاموش';
+            deviceInfo.textContent = `آخرین ارسال کننده: ${sender}`;
+            
+            if (sender !== 'WebApp') {
+                touchState = state;
+                updateButtonState();
+            }
+            
+            updateHistory(state, sender);
+        }
+        
+        // Schedule Checker with Iran Timezone
+        function checkSchedules() {
+            const now = new Date();
+            // تنظیم ساعت برای منطقه زمانی ایران
+            const iranTime = new Intl.DateTimeFormat('fa-IR', {
+                timeZone: 'Asia/Tehran',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            }).format(now);
+            
+            schedules.forEach(schedule => {
+                if (schedule.active && schedule.time === iranTime) {
+                    if (touchState !== schedule.state) {
+                        fetch('/send_touch', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({state: schedule.state})
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            touchState = schedule.state;
+                            updateButtonState();
+                            updateHistory(schedule.state, 'زمان‌بندی');
+                        });
+                    }
+                }
+            });
+        }
+
+        // State Polling with Enhanced Error Handling
+        setInterval(() => {
+            fetch('/get_state')
+                .then(response => response.json())
+                .then(data => {
+                    updateStatus(data.state, data.sender);
+                })
+                .catch(error => console.error('Error:', error));
+            
+            checkSchedules();
+        }, 1000);
+
+        // Load saved schedules with validation
+        const savedSchedules = localStorage.getItem('schedules');
+        if (savedSchedules) {
+            try {
+                const parsed = JSON.parse(savedSchedules);
+                if (Array.isArray(parsed)) {
+                    schedules.push(...parsed);
+                    updateScheduleUI();
+                }
+            } catch (e) {
+                console.error('Error loading schedules:', e);
+            }
+        }
+
+        // Save schedules with error handling
+        function saveSchedules() {
+            try {
+                localStorage.setItem('schedules', JSON.stringify(schedules));
+            } catch (e) {
+                console.error('Error saving schedules:', e);
+            }
+        }
+
+        // Add event listeners for schedule changes
+        window.addEventListener('beforeunload', saveSchedules);
+
+        // Initial load with animation
+        updateHistoryChart();
+        
+        // Add page load animation
+        document.addEventListener('DOMContentLoaded', () => {
+            document.body.classList.add('animate__animated', 'animate__fadeIn');
+        });
+    </script>
+</body>
+</html>
